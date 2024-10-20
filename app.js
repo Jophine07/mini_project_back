@@ -68,6 +68,39 @@ app.post('/addturf', async (req, res) => {
     }
 });
 
+app.post('/cancelbooking', async (req, res) => {
+  const { bookingId } = req.body;
+  try {
+      // Assuming you want to mark the booking as cancelled, you could update a field or remove it
+      const response = await turfmodel.findByIdAndDelete(bookingId);
+      
+      if (response) {
+          res.json({ status: 'success' });
+      } else {
+          console.log(bookingId)
+          res.json({ status: 'error', message: 'Booking not found.' });
+      }
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ status: 'error', message: 'Error processing cancellation.' });
+  }
+});
+
+
+app.post("/recent-booking", async (req, res) => {
+  try {
+    const { username } = req.body;
+    const recentBooking = await turfmodel.find({ name: username })
+      .sort({ createdAt: -1 }) // Sort by createdAt in descending order
+      .limit(1); // Limit the results to the most recent booking
+    res.json(recentBooking);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error retrieving booking.' });
+  }
+});
+
+
 app.post('/bookinghistory', async (req, res) => {
     const { username } = req.body;  // Extract username from request body
 
