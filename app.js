@@ -32,38 +32,47 @@ app.post("/adminSignUp",async(req,res)=>
     res.json({"Status":"Saved"})
 })
 
+
+app.post('/checkUsername', async (req, res) => {
+  const { user_name } = req.body;
+  const user = await userModel.findOne({ user_name });
+  
+  if (user) {
+      res.json({ isAvailable: false });
+  } else {
+      res.json({ isAvailable: true });
+  }
+});
+
+
 app.post('/addturf', async (req, res) => {
     try {
-        // Check if the required fields are present
         const { date, timeSlot } = req.body;
 
         if (!date || !timeSlot) {
             return res.status(400).json({ message: 'Date and time slot are required.' });
         }
 
-        // Check if the date is in the past
         const selectedDate = new Date(date);
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // Set today's date to midnight for accurate comparison
+        today.setHours(0, 0, 0, 0);
 
         if (selectedDate < today) {
             return res.status(400).json({ message: 'The booking date cannot be in the past.' });
         }
 
-        // Check if the time slot is already booked
         const existingBooking = await turfmodel.findOne({ date, timeSlot });
         
         if (existingBooking) {
             return res.status(400).json({ message: 'This time slot is already booked. Please choose another time.' });
         }
 
-        // Create a new booking
         const newBooking = new turfmodel(req.body);
         await newBooking.save();
 
         res.status(200).json({ message: 'Booking successful' });
     } catch (error) {
-        console.error(error); // Log the error
+        console.error(error); 
         res.status(500).json({ message: 'Error booking turf' });
     }
 });
@@ -71,7 +80,6 @@ app.post('/addturf', async (req, res) => {
 app.post('/cancelbooking', async (req, res) => {
   const { bookingId } = req.body;
   try {
-      // Assuming you want to mark the booking as cancelled, you could update a field or remove it
       const response = await turfmodel.findByIdAndDelete(bookingId);
       
       if (response) {
@@ -91,8 +99,8 @@ app.post("/recent-booking", async (req, res) => {
   try {
     const { username } = req.body;
     const recentBooking = await turfmodel.find({ name: username })
-      .sort({ createdAt: -1 }) // Sort by createdAt in descending order
-      .limit(1); // Limit the results to the most recent booking
+      .sort({ createdAt: -1 }) 
+      .limit(1);
     res.json(recentBooking);
   } catch (error) {
     console.error(error);
@@ -102,28 +110,38 @@ app.post("/recent-booking", async (req, res) => {
 
 
 app.post('/bookinghistory', async (req, res) => {
-    const { username } = req.body;  // Extract username from request body
-
-    // Log the incoming username for debugging
-
+    const { username } = req.body;  
     try {
-      // Fetch booking history based on the username
       const bookings = await turfmodel.find({ name: username });
 
-      // Log the fetched bookings for debugging
-      // Check if bookings were found
       if (!bookings || bookings.length === 0) {
         return res.status(404).json({ message: 'No bookings found for this user.' });
       }
 
-      // Send the bookings in the response
       res.status(200).json(bookings);
     } catch (error) {
-      // Log the error for debugging
       console.error('Error retrieving booking history:', error);
       res.status(500).json({ message: 'Error retrieving booking history.' });
     }
 });
+
+
+app.post('/orderhistory', async (req, res) => {
+    const { username } = req.body;
+    console.log("username:",username)
+    try {
+        const orders = await Order.find({ user: username });
+        
+        if (orders.length === 0) {
+            return res.status(404).json({ message: 'No orders found for this user' });
+        }
+        
+        res.status(200).json(orders);
+    } catch (error) {
+        res.status(500).json({ message: 'Error retrieving order history', error: error.message });
+    }
+});
+
 
 
 
@@ -147,14 +165,14 @@ app.post("/userLogin", async (req, res) => {
             let dbuserPassword = response[0].user_password;
             bcrypt.compare(input.user_password, dbuserPassword, (error, isMatch) => {
                 if (isMatch) {
-                    // Generate JWT token with the user's name as the payload
+                    // Generate JWT token with the user's name
                     const token = jwt.sign({ user_name: response[0].user_name }, 'your_secret_key', { expiresIn: '1d' });
                     
                     // Send the token back to the frontend
                     res.json({
                         status: "login success",
-                        token: token,  // Token sent to the frontend
-                        user_name: response[0].user_name // Include the user name if needed
+                        token: token,  
+                        user_name: response[0].user_name 
                     });
                 } else {
                     res.json({ status: "incorrect" });
@@ -203,28 +221,22 @@ app.post('/api/orders/create-order', async (req, res) => {
     try {
       const { user, items } = req.body;
   
-      // Log the incoming order data for debugging
       console.log('Order received:', { user, items });
   
-      // Validate the required fields
       if (!user || !items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ message: 'Invalid order data' });
       }
   
-      // Calculate total price from the items array
       const totalPrice = items.reduce((sum, item) => sum + item.price, 0);
   
-      // Create a new order
       const newOrder = new Order({
         user,
         items,
         totalPrice
       });
   
-      // Save the order to the database
       await newOrder.save();
   
-      // Send a success response
       res.status(201).json({ message: 'Order placed successfully', order: newOrder });
     } catch (error) {
       console.error('Error creating order:', error);
@@ -283,10 +295,9 @@ app.get('/bookings', (req, res) => {
 
   
   app.post("/deleteorder", (req, res) => {
-    const input = req.body; // Extract the name or user from the request body
+    const input = req.body;
     console.log('Deleting booking for:', input);
   
-    // Make sure 'user' is the correct field name in your model schema
     turfmodel.findOneAndDelete({ user: input.user })
       .then((response) => {
         if (response) {
