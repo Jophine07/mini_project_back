@@ -77,6 +77,41 @@ app.post('/addturf', async (req, res) => {
     }
 });
 
+
+
+app.post('/deleteorder', async (req, res) => {
+  const { orderId } = req.body; // Extract the order ID from the request body
+  console.log(orderId);
+
+  try {
+    const deletedOrder = await Order.findByIdAndDelete(orderId); // Delete the order by ID
+
+    if (!deletedOrder) {
+      return res.status(404).json({ message: 'Order not found' }); // Handle case when order not found
+    }
+
+    res.status(200).json({ message: 'Order deleted successfully', deletedOrder });
+  } catch (error) {
+    console.error('Error deleting order:', error);
+    res.status(500).json({ message: 'Failed to delete the order. Please try again later.' });
+  }
+});
+
+
+
+app.get('/bookedslots', async (req, res) => {
+  const { date } = req.query;
+  try {
+    const bookings = await turfmodel.find({ date });
+    const bookedSlots = bookings.map((booking) => booking.timeSlot);
+    res.status(200).json(bookedSlots);
+  } catch (error) {
+    console.error('Error fetching booked slots:', error);
+    res.status(500).json({ message: 'Error fetching booked slots.' });
+  }
+});
+
+
 app.post('/cancelbooking', async (req, res) => {
   const { bookingId } = req.body;
   try {
@@ -126,9 +161,28 @@ app.post('/bookinghistory', async (req, res) => {
 });
 
 
+app.put('/admin/updateorderstatus/:id', async (req, res) => {
+  try {
+    const { status } = req.body; // New status from the request body
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    order.status = status;
+    await order.save();
+
+    res.json({ message: 'Order status updated successfully', order });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating order status' });
+  }
+});
+
+
+
 app.post('/orderhistory', async (req, res) => {
     const { username } = req.body;
-    console.log("username:",username)
     try {
         const orders = await Order.find({ user: username });
         
@@ -218,31 +272,33 @@ app.post("/adminLogin",async(req,res)=>
 
 
 app.post('/api/orders/create-order', async (req, res) => {
-    try {
+  try {
       const { user, items } = req.body;
-  
+
       console.log('Order received:', { user, items });
-  
+
       if (!user || !items || !Array.isArray(items) || items.length === 0) {
-        return res.status(400).json({ message: 'Invalid order data' });
+          return res.status(400).json({ message: 'Invalid order data' });
       }
-  
+
       const totalPrice = items.reduce((sum, item) => sum + item.price, 0);
-  
+
       const newOrder = new Order({
-        user,
-        items,
-        totalPrice
+          user,
+          items,
+          totalPrice,
+          status: 'On Progress'  // Setting the default status for a new order
       });
-  
+
       await newOrder.save();
-  
+
       res.status(201).json({ message: 'Order placed successfully', order: newOrder });
-    } catch (error) {
+  } catch (error) {
       console.error('Error creating order:', error);
       res.status(500).json({ message: 'Failed to place the order. Please try again later.' });
-    }
-  });
+  }
+});
+
 
 
 

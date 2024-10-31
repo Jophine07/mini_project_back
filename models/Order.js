@@ -18,7 +18,14 @@ const orderSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  status: {
+    type: String,
+    default: "Pending", // Default status set to "Pending"
+    enum: ["Pending", "Ready", "Delivered"] // Different possible statuses
   }
 });
+
 const Order = mongoose.model('Order', orderSchema);
-module.exports={Order}
+
+module.exports = { Order };
